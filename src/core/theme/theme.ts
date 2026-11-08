@@ -54,3 +54,19 @@ export const darkTheme: MD3Theme = {
     outlineVariant: '#3F4947',
   },
 };
+
+// set my defined colors to navigation theme colors
+export function toNavigationTheme(theme: MD3Theme): NavigationTheme {
+  const base = theme.dark ? DarkTheme : DefaultTheme;
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      primary: theme.colors.primary,
+      background: theme.colors.background,
+      card: theme.colors.surface,
+      text: theme.colors.onSurface,
+      border: theme.colors.outlineVariant,
+    },
+  };
+}
