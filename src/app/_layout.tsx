@@ -1,5 +1,25 @@
-import { Stack } from "expo-router";
+import { Stack, ThemeProvider } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useColorScheme } from 'react-native';
+import { PaperProvider } from 'react-native-paper';
 
+import { darkTheme, lightTheme, toNavigationTheme } from '@/core/theme/theme';
+import { AppSnackbar } from '@/core/ui/AppSnackbar';
+
+// wrap all pages for theme and snackbar
 export default function RootLayout() {
-  return <Stack />;
+  const isDark = useColorScheme() === 'dark';
+  const theme = isDark ? darkTheme : lightTheme;
+
+  return (
+    <PaperProvider theme={theme}>
+      <ThemeProvider value={toNavigationTheme(theme)}>
+        <StatusBar style={isDark ? 'light' : 'dark'} />
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+        <AppSnackbar />
+      </ThemeProvider>
+    </PaperProvider>
+  );
 }
