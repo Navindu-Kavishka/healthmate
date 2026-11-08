@@ -27,3 +27,30 @@ export const lightTheme: MD3Theme = {
     outlineVariant: '#BEC9C5',
   },
 };
+
+export const darkTheme: MD3Theme = {
+  ...MD3DarkTheme,
+  colors: {
+    ...MD3DarkTheme.colors,
+    primary: '#82D5C8',
+    onPrimary: '#003731',
+    primaryContainer: '#005048',
+    onPrimaryContainer: '#9EF2E4',
+    secondary: '#B1CCC7',
+    onSecondary: '#1C3532',
+    secondaryContainer: '#334B48',
+    onSecondaryContainer: '#CCE8E3',
+    tertiary: '#FFB68A',
+    onTertiary: '#532200',
+    tertiaryContainer: '#763300',
+    onTertiaryContainer: '#FFDBC8',
+    background: '#0E1513',
+    onBackground: '#DDE4E1',
+    surface: '#0E1513',
+    onSurface: '#DDE4E1',
+    surfaceVariant: '#3F4947',
+    onSurfaceVariant: '#BEC9C5',
+    outline: '#899390',
+    outlineVariant: '#3F4947',
+  },
+};
