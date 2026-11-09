@@ -36,3 +36,10 @@ export function addDays(isoDate: string, days: number): string {
   date.setDate(date.getDate() + days);
   return toISODate(date);
 }
+
+//"2026-11-07" to "Sat, 7 Nov 2026"
+export function formatDisplayDate(isoDate: string): string {
+  const date = parseISODate(isoDate);
+  if (!date) return isoDate;
+  return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
+}
