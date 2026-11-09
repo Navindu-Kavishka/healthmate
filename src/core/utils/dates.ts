@@ -43,3 +43,9 @@ export function formatDisplayDate(isoDate: string): string {
   if (!date) return isoDate;
   return `${WEEKDAYS[date.getDay()]}, ${date.getDate()} ${MONTHS[date.getMonth()]} ${date.getFullYear()}`;
 }
+
+// "2026-11-07" to "Sat" (chart labels)
+export function formatWeekday(isoDate: string): string {
+  const date = parseISODate(isoDate);
+  return date ? WEEKDAYS[date.getDay()] : '';
+}
