@@ -1,21 +1,45 @@
+import { useEffect, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { Card, Text } from 'react-native-paper';
+import { ActivityIndicator, Card, Text } from 'react-native-paper';
 
 import { formatDisplayDate } from '@/core/utils/dates';
 import { formatNumber } from '@/core/utils/format';
-
-// test data
-const SAMPLE = [
-  { id: 1, date: '2026-11-07', steps: 8450, calories: 2210, water: 1900 },
-  { id: 2, date: '2026-11-06', steps: 6120, calories: 1980, water: 1600 },
-  { id: 3, date: '2026-11-05', steps: 10240, calories: 2540, water: 2250 },
-];
+import { getRecords } from '@/features/records/recordRepository';
+import type { HealthRecord } from '@/features/records/types';
 
 export default function RecordsScreen() {
+  const [records, setRecords] = useState<HealthRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // first load get all records from the database
+  useEffect(() => {
+    let isCancelled = false;
+
+    async function load() {
+      try {
+        const rows = await getRecords();
+        if (!isCancelled) setRecords(rows);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        if (!isCancelled) setIsLoading(false);
+      }
+    }
+
+    load();
+    return () => {
+      isCancelled = true;
+    };
+  }, []);
+
+  if (isLoading) {
+    return <ActivityIndicator style={styles.loading} />;
+  }
+
   return (
     <View style={styles.screen}>
       <FlatList
-        data={SAMPLE}
+        data={records}
         keyExtractor={(record) => String(record.id)}
         renderItem={({ item }) => (
           <Card mode="elevated" style={styles.card}>
@@ -34,6 +58,7 @@ export default function RecordsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  loading: { marginTop: 32 },
   card: { marginHorizontal: 16, marginVertical: 6 },
   metrics: { flexDirection: 'row', justifyContent: 'space-between' },
 });
