@@ -1,8 +1,8 @@
 import { ScrollView, StyleSheet } from 'react-native';
-import { Card, ProgressBar, Text, useTheme } from 'react-native-paper';
+import { Text, useTheme } from 'react-native-paper';
 
 import { formatDisplayDate, todayISO } from '@/core/utils/dates';
-import { formatNumber } from '@/core/utils/format';
+import { StatCard } from '@/features/dashboard/components/StatCard';
 
 // test data
 const TODAY = { steps: 7850, calories: 420, water: 1800 };
@@ -17,47 +17,9 @@ export default function TodayScreen() {
         {formatDisplayDate(todayISO())}
       </Text>
 
-      <Card mode="contained" style={styles.card}>
-        <Card.Content style={styles.cardContent}>
-          <Text variant="titleMedium">Steps</Text>
-          <Text variant="headlineMedium">
-            {formatNumber(TODAY.steps)}
-            <Text variant="bodyMedium"> steps</Text>
-          </Text>
-          <ProgressBar progress={TODAY.steps / GOALS.steps} color={theme.colors.primary} style={styles.bar} />
-          <Text variant="bodySmall">
-            {Math.round((TODAY.steps / GOALS.steps) * 100)}% of {formatNumber(GOALS.steps)} steps
-          </Text>
-        </Card.Content>
-      </Card>
-
-      <Card mode="contained" style={styles.card}>
-        <Card.Content style={styles.cardContent}>
-          <Text variant="titleMedium">Calories</Text>
-          <Text variant="headlineMedium">
-            {formatNumber(TODAY.calories)}
-            <Text variant="bodyMedium"> kcal</Text>
-          </Text>
-          <ProgressBar progress={TODAY.calories / GOALS.calories} color={theme.colors.tertiary} style={styles.bar} />
-          <Text variant="bodySmall">
-            {Math.round((TODAY.calories / GOALS.calories) * 100)}% of {formatNumber(GOALS.calories)} kcal
-          </Text>
-        </Card.Content>
-      </Card>
-
-      <Card mode="contained" style={styles.card}>
-        <Card.Content style={styles.cardContent}>
-          <Text variant="titleMedium">Water</Text>
-          <Text variant="headlineMedium">
-            {formatNumber(TODAY.water)}
-            <Text variant="bodyMedium"> ml</Text>
-          </Text>
-          <ProgressBar progress={TODAY.water / GOALS.water} color={theme.colors.secondary} style={styles.bar} />
-          <Text variant="bodySmall">
-            {Math.round((TODAY.water / GOALS.water) * 100)}% of {formatNumber(GOALS.water)} ml
-          </Text>
-        </Card.Content>
-      </Card>
+      <StatCard icon="walk" label="Steps" unit="steps" value={TODAY.steps} goal={GOALS.steps} color={theme.colors.primary} />
+      <StatCard icon="fire" label="Calories" unit="kcal" value={TODAY.calories} goal={GOALS.calories} color={theme.colors.tertiary} />
+      <StatCard icon="cup-water" label="Water" unit="ml" value={TODAY.water} goal={GOALS.water} color={theme.colors.secondary} />
     </ScrollView>
   );
 }
@@ -65,7 +27,4 @@ export default function TodayScreen() {
 const styles = StyleSheet.create({
   content: { padding: 16 },
   date: { marginBottom: 12 },
-  card: { marginBottom: 12 },
-  cardContent: { gap: 6 },
-  bar: { height: 8, borderRadius: 4 },
 });
