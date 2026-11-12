@@ -9,7 +9,7 @@ function TabIcon({ name, color, size }: { name: IconName; color: ColorValue; siz
   return <MaterialCommunityIcons name={name} color={color as string} size={size} />;
 }
 
-//three tabs at the bottom
+// bootom tabs
 export default function TabsLayout() {
   return (
     <Tabs>
@@ -25,13 +25,6 @@ export default function TabsLayout() {
         options={{
           title: 'History',
           tabBarIcon: ({ color, size }) => <TabIcon name="history" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="goals"
-        options={{
-          title: 'Goals',
-          tabBarIcon: ({ color, size }) => <TabIcon name="flag-checkered" color={color} size={size} />,
         }}
       />
     </Tabs>
