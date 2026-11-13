@@ -1,43 +1,58 @@
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Card, Text } from 'react-native-paper';
+import { ActivityIndicator, Card, HelperText, Searchbar, SegmentedButtons, Text } from 'react-native-paper';
 
 import { formatDisplayDate } from '@/core/utils/dates';
 import { formatNumber } from '@/core/utils/format';
-import { getRecords } from '@/features/records/recordRepository';
-import type { HealthRecord } from '@/features/records/types';
+import { useRecordStore } from '@/features/records/recordStore';
+import type { SortOption } from '@/features/records/types';
+
+const SORT_BUTTONS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'mostSteps', label: 'Most steps' },
+];
 
 export default function RecordsScreen() {
-  const [records, setRecords] = useState<HealthRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const records = useRecordStore((state) => state.records);
+  const search = useRecordStore((state) => state.search);
+  const sort = useRecordStore((state) => state.sort);
+  const isLoading = useRecordStore((state) => state.isLoading);
+  const error = useRecordStore((state) => state.error);
+  const loadRecords = useRecordStore((state) => state.loadRecords);
+  const setSearch = useRecordStore((state) => state.setSearch);
+  const setSort = useRecordStore((state) => state.setSort);
 
-  // first load get all records from the database
-  useEffect(() => {
-    let isCancelled = false;
+  // Reload every time this tab comes into view (like after adding a record)
+  useFocusEffect(
+    useCallback(() => {
+      loadRecords();
+    }, [loadRecords]),
+  );
 
-    async function load() {
-      try {
-        const rows = await getRecords();
-        if (!isCancelled) setRecords(rows);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        if (!isCancelled) setIsLoading(false);
-      }
-    }
-
-    load();
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
-
-  if (isLoading) {
-    return <ActivityIndicator style={styles.loading} />;
-  }
+  const emptyList = isLoading ? (
+    <ActivityIndicator style={styles.loading} />
+  ) : (
+    <Text style={styles.empty}>{search ? 'No matching records' : 'No records yet'}</Text>
+  );
 
   return (
     <View style={styles.screen}>
+      <Searchbar
+        placeholder="Search by date, e.g. 2026-11"
+        value={search}
+        onChangeText={setSearch}
+        style={styles.search}
+      />
+      <SegmentedButtons
+        value={sort}
+        onValueChange={(value) => setSort(value as SortOption)}
+        buttons={SORT_BUTTONS}
+        style={styles.sort}
+      />
+      {error ? <HelperText type="error">{error}</HelperText> : null}
+
       <FlatList
         data={records}
         keyExtractor={(record) => String(record.id)}
@@ -51,6 +66,7 @@ export default function RecordsScreen() {
             </Card.Content>
           </Card>
         )}
+        ListEmptyComponent={emptyList}
       />
     </View>
   );
@@ -58,7 +74,10 @@ export default function RecordsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  search: { marginHorizontal: 16, marginTop: 12 },
+  sort: { marginHorizontal: 16, marginVertical: 12 },
   loading: { marginTop: 32 },
+  empty: { textAlign: 'center', marginTop: 32 },
   card: { marginHorizontal: 16, marginVertical: 6 },
   metrics: { flexDirection: 'row', justifyContent: 'space-between' },
 });

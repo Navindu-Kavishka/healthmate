@@ -6,5 +6,8 @@ export type HealthRecord = {
   water: number;   // ml
 };
 
-/** A record that hasn't been saved yet, so SQLite hasn't given it an id. */
+//record not saved yet  ( SQLite hasn't given it an id.) 
 export type NewHealthRecord = Omit<HealthRecord, 'id'>;
+
+// history list ordering
+export type SortOption = 'newest' | 'oldest' | 'mostSteps';
