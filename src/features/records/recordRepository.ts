@@ -40,7 +40,7 @@ export async function addRecord(record: NewHealthRecord): Promise<number> {
 }
 
 //updating record
-export async function updateRecord(record: NewHealthRecord): Promise<void> {
+export async function updateRecord(record: HealthRecord): Promise<void> {
   const db = await getDb();
   await db.runAsync(
     'UPDATE health_records SET date = ?, steps = ?, calories = ?, water = ? WHERE id = ?',

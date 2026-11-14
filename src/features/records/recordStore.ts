@@ -15,7 +15,7 @@ type RecordState = {
   setSort: (sort: SortOption) => Promise<void>;
   addRecord: (record: NewHealthRecord) => Promise<void>;
   deleteRecord: (id: number) => Promise<void>;
-  updateRecord: (record: NewHealthRecord) => Promise<void>;
+  updateRecord: (record: HealthRecord) => Promise<void>;
 };
 
 // counter to track the latest request, we don't overwrite the state with an old request's result.
