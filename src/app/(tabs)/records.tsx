@@ -1,49 +1,95 @@
-import { useEffect, useState } from 'react';
+import { useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Card, Text } from 'react-native-paper';
+import { ActivityIndicator, Card, HelperText, IconButton, Searchbar, SegmentedButtons, Text } from 'react-native-paper';
 
+import { ConfirmDialog } from '@/core/ui/ConfirmDialog';
+import { EmptyState } from '@/core/ui/EmptyState';
+import { useSnackbarStore } from '@/core/ui/snackbarStore';
 import { formatDisplayDate } from '@/core/utils/dates';
 import { formatNumber } from '@/core/utils/format';
-import { getRecords } from '@/features/records/recordRepository';
-import type { HealthRecord } from '@/features/records/types';
+import { useRecordStore } from '@/features/records/recordStore';
+import type { HealthRecord, SortOption } from '@/features/records/types';
+
+const SORT_BUTTONS = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'mostSteps', label: 'Most steps' },
+];
 
 export default function RecordsScreen() {
-  const [records, setRecords] = useState<HealthRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const records = useRecordStore((state) => state.records);
+  const search = useRecordStore((state) => state.search);
+  const sort = useRecordStore((state) => state.sort);
+  const isLoading = useRecordStore((state) => state.isLoading);
+  const error = useRecordStore((state) => state.error);
+  const loadRecords = useRecordStore((state) => state.loadRecords);
+  const setSearch = useRecordStore((state) => state.setSearch);
+  const setSort = useRecordStore((state) => state.setSort);
+  const deleteRecord = useRecordStore((state) => state.deleteRecord);
+  const showMessage = useSnackbarStore((state) => state.showMessage);
 
-  // first load get all records from the database
-  useEffect(() => {
-    let isCancelled = false;
+  // deleting waiting for confirmation
+  const [recordToDelete, setRecordToDelete] = useState<HealthRecord | null>(null);
 
-    async function load() {
-      try {
-        const rows = await getRecords();
-        if (!isCancelled) setRecords(rows);
-      } catch (error) {
-        console.error(error);
-      } finally {
-        if (!isCancelled) setIsLoading(false);
-      }
+  // Reload every time this tab comes into view ( after adding a record).
+  useFocusEffect(
+    useCallback(() => {
+      loadRecords();
+    }, [loadRecords]),
+  );
+
+  async function confirmDelete() {
+    if (!recordToDelete) return;
+    const { id } = recordToDelete;
+    setRecordToDelete(null);
+    try {
+      await deleteRecord(id);
+      showMessage('Record deleted');
+    } catch (deleteError) {
+      console.error(deleteError);
+      showMessage('Could not delete the record');
     }
-
-    load();
-    return () => {
-      isCancelled = true;
-    };
-  }, []);
-
-  if (isLoading) {
-    return <ActivityIndicator style={styles.loading} />;
   }
+
+  const emptyList = isLoading ? (
+    <ActivityIndicator style={styles.loading} />
+  ) : (
+    <EmptyState
+      icon="calendar-search"
+      title={search ? 'No matching records' : 'No records yet'}
+      message={search ? 'Try a shorter search, such as 2026-11.' : 'Nothing here yet. Add a record to get started.'}
+    />
+  );
 
   return (
     <View style={styles.screen}>
+      <Searchbar
+        placeholder="Search by date, e.g. 2026-11"
+        value={search}
+        onChangeText={setSearch}
+        style={styles.search}
+      />
+      <SegmentedButtons
+        value={sort}
+        onValueChange={(value) => setSort(value as SortOption)}
+        buttons={SORT_BUTTONS}
+        style={styles.sort}
+      />
+      {error ? <HelperText type="error">{error}</HelperText> : null}
+
       <FlatList
         data={records}
         keyExtractor={(record) => String(record.id)}
         renderItem={({ item }) => (
           <Card mode="elevated" style={styles.card}>
-            <Card.Title title={formatDisplayDate(item.date)} titleVariant="titleMedium" />
+            <Card.Title
+              title={formatDisplayDate(item.date)}
+              titleVariant="titleMedium"
+              right={(props) => (
+                <IconButton {...props} icon="delete-outline" accessibilityLabel="Delete record" onPress={() => setRecordToDelete(item)} />
+              )}
+            />
             <Card.Content style={styles.metrics}>
               <Text>{formatNumber(item.steps)} steps</Text>
               <Text>{formatNumber(item.calories)} kcal</Text>
@@ -51,6 +97,16 @@ export default function RecordsScreen() {
             </Card.Content>
           </Card>
         )}
+        ListEmptyComponent={emptyList}
+      />
+
+      <ConfirmDialog
+        visible={recordToDelete !== null}
+        title="Delete this record?"
+        message={recordToDelete ? `The entry for ${formatDisplayDate(recordToDelete.date)} will be removed for good.` : ''}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setRecordToDelete(null)}
       />
     </View>
   );
@@ -58,6 +114,8 @@ export default function RecordsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
+  search: { marginHorizontal: 16, marginTop: 12 },
+  sort: { marginHorizontal: 16, marginVertical: 12 },
   loading: { marginTop: 32 },
   card: { marginHorizontal: 16, marginVertical: 6 },
   metrics: { flexDirection: 'row', justifyContent: 'space-between' },
