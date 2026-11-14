@@ -27,6 +27,14 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => <TabIcon name="history" color={color} size={size} />,
         }}
       />
+      <Tabs.Screen
+        name="goals"
+        options={{
+          title: 'Goals',
+          tabBarIcon: ({ color, size }) => <TabIcon name="flag-checkered" color={color} size={size} />,
+        }}
+      />
     </Tabs>
+    
   );
 }

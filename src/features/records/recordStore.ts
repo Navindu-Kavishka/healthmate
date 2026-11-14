@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 import * as recordRepository from './recordRepository';
-import type { HealthRecord, SortOption } from './types';
+import type { HealthRecord, NewHealthRecord, SortOption } from './types';
 
 type RecordState = {
   records: HealthRecord[];
@@ -13,6 +13,7 @@ type RecordState = {
   loadRecords: () => Promise<void>;
   setSearch: (search: string) => Promise<void>;
   setSort: (sort: SortOption) => Promise<void>;
+  addRecord: (record: NewHealthRecord) => Promise<void>;
   deleteRecord: (id: number) => Promise<void>;
 };
 
@@ -48,6 +49,11 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
 
   setSort: async (sort) => {
     set({ sort });
+    await get().loadRecords();
+  },
+
+  addRecord: async (record) => {
+    await recordRepository.addRecord(record);
     await get().loadRecords();
   },
   
