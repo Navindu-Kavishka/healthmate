@@ -20,6 +20,12 @@ export async function getRecords(dateSearch = '', sort: SortOption = 'newest'): 
   );
 }
 
+// get a single record by id
+export async function getRecordById(id: number): Promise<HealthRecord | null> {
+  const db = await getDb();
+  return db.getFirstAsync<HealthRecord>(`SELECT ${COLUMNS} FROM health_records WHERE id = ?`, id);
+}
+
 // saving a new record
 export async function addRecord(record: NewHealthRecord): Promise<number> {
   const db = await getDb();
@@ -33,6 +39,20 @@ export async function addRecord(record: NewHealthRecord): Promise<number> {
   return result.lastInsertRowId;
 }
 
+//updating record
+export async function updateRecord(record: NewHealthRecord): Promise<void> {
+  const db = await getDb();
+  await db.runAsync(
+    'UPDATE health_records SET date = ?, steps = ?, calories = ?, water = ? WHERE id = ?',
+    record.date,
+    record.steps,
+    record.calories,
+    record.water,
+    record.id,
+  );
+}
+
+// deleting a record by id
 export async function deleteRecord(id: number): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM health_records WHERE id = ?', id);

@@ -15,6 +15,7 @@ type RecordState = {
   setSort: (sort: SortOption) => Promise<void>;
   addRecord: (record: NewHealthRecord) => Promise<void>;
   deleteRecord: (id: number) => Promise<void>;
+  updateRecord: (record: NewHealthRecord) => Promise<void>;
 };
 
 // counter to track the latest request, we don't overwrite the state with an old request's result.
@@ -56,7 +57,12 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     await recordRepository.addRecord(record);
     await get().loadRecords();
   },
-  
+
+    updateRecord: async (record) => {
+      await recordRepository.updateRecord(record);
+      await get().loadRecords();
+    },
+
   deleteRecord: async (id) => {
     await recordRepository.deleteRecord(id);
     await get().loadRecords();
