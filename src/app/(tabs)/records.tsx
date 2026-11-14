@@ -1,12 +1,15 @@
 import { useFocusEffect } from 'expo-router';
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Card, HelperText, Searchbar, SegmentedButtons, Text } from 'react-native-paper';
+import { ActivityIndicator, Card, HelperText, IconButton, Searchbar, SegmentedButtons, Text } from 'react-native-paper';
 
+import { ConfirmDialog } from '@/core/ui/ConfirmDialog';
+import { EmptyState } from '@/core/ui/EmptyState';
+import { useSnackbarStore } from '@/core/ui/snackbarStore';
 import { formatDisplayDate } from '@/core/utils/dates';
 import { formatNumber } from '@/core/utils/format';
 import { useRecordStore } from '@/features/records/recordStore';
-import type { SortOption } from '@/features/records/types';
+import type { HealthRecord, SortOption } from '@/features/records/types';
 
 const SORT_BUTTONS = [
   { value: 'newest', label: 'Newest' },
@@ -23,18 +26,40 @@ export default function RecordsScreen() {
   const loadRecords = useRecordStore((state) => state.loadRecords);
   const setSearch = useRecordStore((state) => state.setSearch);
   const setSort = useRecordStore((state) => state.setSort);
+  const deleteRecord = useRecordStore((state) => state.deleteRecord);
+  const showMessage = useSnackbarStore((state) => state.showMessage);
 
-  // Reload every time this tab comes into view (like after adding a record)
+  // deleting waiting for confirmation
+  const [recordToDelete, setRecordToDelete] = useState<HealthRecord | null>(null);
+
+  // Reload every time this tab comes into view ( after adding a record).
   useFocusEffect(
     useCallback(() => {
       loadRecords();
     }, [loadRecords]),
   );
 
+  async function confirmDelete() {
+    if (!recordToDelete) return;
+    const { id } = recordToDelete;
+    setRecordToDelete(null);
+    try {
+      await deleteRecord(id);
+      showMessage('Record deleted');
+    } catch (deleteError) {
+      console.error(deleteError);
+      showMessage('Could not delete the record');
+    }
+  }
+
   const emptyList = isLoading ? (
     <ActivityIndicator style={styles.loading} />
   ) : (
-    <Text style={styles.empty}>{search ? 'No matching records' : 'No records yet'}</Text>
+    <EmptyState
+      icon="calendar-search"
+      title={search ? 'No matching records' : 'No records yet'}
+      message={search ? 'Try a shorter search, such as 2026-11.' : 'Nothing here yet. Add a record to get started.'}
+    />
   );
 
   return (
@@ -58,7 +83,13 @@ export default function RecordsScreen() {
         keyExtractor={(record) => String(record.id)}
         renderItem={({ item }) => (
           <Card mode="elevated" style={styles.card}>
-            <Card.Title title={formatDisplayDate(item.date)} titleVariant="titleMedium" />
+            <Card.Title
+              title={formatDisplayDate(item.date)}
+              titleVariant="titleMedium"
+              right={(props) => (
+                <IconButton {...props} icon="delete-outline" accessibilityLabel="Delete record" onPress={() => setRecordToDelete(item)} />
+              )}
+            />
             <Card.Content style={styles.metrics}>
               <Text>{formatNumber(item.steps)} steps</Text>
               <Text>{formatNumber(item.calories)} kcal</Text>
@@ -67,6 +98,15 @@ export default function RecordsScreen() {
           </Card>
         )}
         ListEmptyComponent={emptyList}
+      />
+
+      <ConfirmDialog
+        visible={recordToDelete !== null}
+        title="Delete this record?"
+        message={recordToDelete ? `The entry for ${formatDisplayDate(recordToDelete.date)} will be removed for good.` : ''}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setRecordToDelete(null)}
       />
     </View>
   );
@@ -77,7 +117,6 @@ const styles = StyleSheet.create({
   search: { marginHorizontal: 16, marginTop: 12 },
   sort: { marginHorizontal: 16, marginVertical: 12 },
   loading: { marginTop: 32 },
-  empty: { textAlign: 'center', marginTop: 32 },
   card: { marginHorizontal: 16, marginVertical: 6 },
   metrics: { flexDirection: 'row', justifyContent: 'space-between' },
 });

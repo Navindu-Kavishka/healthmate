@@ -20,3 +20,7 @@ export async function getRecords(dateSearch = '', sort: SortOption = 'newest'): 
   );
 }
 
+export async function deleteRecord(id: number): Promise<void> {
+  const db = await getDb();
+  await db.runAsync('DELETE FROM health_records WHERE id = ?', id);
+}

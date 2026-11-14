@@ -4,6 +4,7 @@ import { useColorScheme } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
 
 import { darkTheme, lightTheme, toNavigationTheme } from '@/core/theme/theme';
+import { AppSnackbar } from '@/core/ui/AppSnackbar';
 
 // wrap all functions
  export default function RootLayout() {
@@ -17,6 +18,7 @@ import { darkTheme, lightTheme, toNavigationTheme } from '@/core/theme/theme';
         <Stack>
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
+        <AppSnackbar />
       </ThemeProvider>
     </PaperProvider>
   );
