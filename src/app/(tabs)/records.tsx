@@ -1,7 +1,7 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Card, HelperText, IconButton, Searchbar, SegmentedButtons, Text } from 'react-native-paper';
+import { ActivityIndicator, Card, FAB, HelperText, IconButton, Searchbar, SegmentedButtons, Text } from 'react-native-paper';
 
 import { ConfirmDialog } from '@/core/ui/ConfirmDialog';
 import { EmptyState } from '@/core/ui/EmptyState';
@@ -58,7 +58,7 @@ export default function RecordsScreen() {
     <EmptyState
       icon="calendar-search"
       title={search ? 'No matching records' : 'No records yet'}
-      message={search ? 'Try a shorter search, such as 2026-11.' : 'Nothing here yet. Add a record to get started.'}
+      message={search ? 'Try a shorter search, such as 2026-11.' : 'Tap Add to log your first day.'}
     />
   );
 
@@ -100,6 +100,13 @@ export default function RecordsScreen() {
         ListEmptyComponent={emptyList}
       />
 
+      <FAB
+        icon="plus"
+        label="Add"
+        style={styles.fab}
+        onPress={() => router.push('/record/new')}
+      />
+
       <ConfirmDialog
         visible={recordToDelete !== null}
         title="Delete this record?"
@@ -119,4 +126,5 @@ const styles = StyleSheet.create({
   loading: { marginTop: 32 },
   card: { marginHorizontal: 16, marginVertical: 6 },
   metrics: { flexDirection: 'row', justifyContent: 'space-between' },
+  fab: { position: 'absolute', right: 16, bottom: 16 },
 });

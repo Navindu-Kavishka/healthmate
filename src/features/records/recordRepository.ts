@@ -1,5 +1,5 @@
 import { getDb } from '@/core/db/database';
-import type { HealthRecord, SortOption } from './types';
+import type { HealthRecord, NewHealthRecord, SortOption } from './types';
 
 // health_records table
 const COLUMNS = 'id, date, steps, calories, water';
@@ -18,6 +18,19 @@ export async function getRecords(dateSearch = '', sort: SortOption = 'newest'): 
     `SELECT ${COLUMNS} FROM health_records WHERE date LIKE ? ORDER BY ${ORDER_BY[sort]}`,
     `${prefix}%`,
   );
+}
+
+// saving a new record
+export async function addRecord(record: NewHealthRecord): Promise<number> {
+  const db = await getDb();
+  const result = await db.runAsync(
+    'INSERT INTO health_records (date, steps, calories, water) VALUES (?, ?, ?, ?)',
+    record.date,
+    record.steps,
+    record.calories,
+    record.water,
+  );
+  return result.lastInsertRowId;
 }
 
 export async function deleteRecord(id: number): Promise<void> {
