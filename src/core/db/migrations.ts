@@ -1,11 +1,13 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
+import { DEFAULT_GOALS } from '@/features/goals/types';
 import { seedHealthRecords } from './seed';
 
 type Migration = (db: SQLiteDatabase) => Promise<void>;
 
+// migrations with versions
 const MIGRATIONS: Migration[] = [
-  
+  // Version 1: the records table, plus dummy data on first launch.
   async (db) => {
     await db.execAsync(`
       CREATE TABLE health_records (
@@ -20,8 +22,27 @@ const MIGRATIONS: Migration[] = [
     `);
     await seedHealthRecords(db);
   },
+
+  // Version 2: daily goals. A single row whose id is always 1.
+  async (db) => {
+    await db.execAsync(`
+      CREATE TABLE goals (
+        id       INTEGER PRIMARY KEY CHECK (id = 1),
+        steps    INTEGER NOT NULL,
+        calories INTEGER NOT NULL,
+        water    INTEGER NOT NULL
+      );
+    `);
+    await db.runAsync(
+      'INSERT INTO goals (id, steps, calories, water) VALUES (1, ?, ?, ?)',
+      DEFAULT_GOALS.steps,
+      DEFAULT_GOALS.calories,
+      DEFAULT_GOALS.water,
+    );
+  },
 ];
 
+/** Runs every migration the database hasn't had yet, each one in its own transaction. */
 export async function migrate(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const currentVersion = row?.user_version ?? 0;
