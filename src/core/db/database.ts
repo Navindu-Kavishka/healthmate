@@ -20,6 +20,8 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
 async function openDatabase(): Promise<SQLite.SQLiteDatabase> {
   const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
   await db.execAsync('PRAGMA journal_mode = WAL;'); 
+  // Must be set outside a transaction, otherwise ON DELETE CASCADE never fires.
+  await db.execAsync('PRAGMA foreign_keys = ON;');
   await migrate(db);
   return db;
 }

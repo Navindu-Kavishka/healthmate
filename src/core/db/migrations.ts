@@ -40,9 +40,55 @@ const MIGRATIONS: Migration[] = [
       DEFAULT_GOALS.water,
     );
   },
+
+  // Version 3: the log behind the totals. health_records stays the day's rollup,
+  // record_entries says what happened to make it
+  async (db) => {
+    await db.execAsync(`
+      CREATE TABLE record_entries (
+        id         INTEGER PRIMARY KEY AUTOINCREMENT,
+        -- Deleting the day deletes its log (needs PRAGMA foreign_keys = ON).
+        record_id  INTEGER NOT NULL REFERENCES health_records(id) ON DELETE CASCADE,
+        created_at TEXT    NOT NULL,
+        metric     TEXT    NOT NULL CHECK (metric IN ('steps', 'calories', 'water')),
+        amount     INTEGER NOT NULL CHECK (amount > 0),
+        note       TEXT
+      );
+      CREATE INDEX idx_record_entries_record ON record_entries (record_id, created_at);
+    `);
+
+    // Every day that already has a number starts with one entry per non-zero metric.
+    // NOT EXISTS keeps this safe to run twice.
+    await db.execAsync(`
+      INSERT INTO record_entries (record_id, created_at, metric, amount, note)
+      SELECT id, date || 'T00:00:00', 'steps', steps, 'opening balance'
+      FROM health_records
+      WHERE steps > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM record_entries
+          WHERE record_entries.record_id = health_records.id AND record_entries.metric = 'steps'
+        );
+      INSERT INTO record_entries (record_id, created_at, metric, amount, note)
+      SELECT id, date || 'T00:00:00', 'calories', calories, 'opening balance'
+      FROM health_records
+      WHERE calories > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM record_entries
+          WHERE record_entries.record_id = health_records.id AND record_entries.metric = 'calories'
+        );
+      INSERT INTO record_entries (record_id, created_at, metric, amount, note)
+      SELECT id, date || 'T00:00:00', 'water', water, 'opening balance'
+      FROM health_records
+      WHERE water > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM record_entries
+          WHERE record_entries.record_id = health_records.id AND record_entries.metric = 'water'
+        );
+    `);
+  },
 ];
 
-/** Runs every migration the database hasn't had yet, each one in its own transaction. */
+// Runs every migration the database hasn't had yet, each one in its own transaction. 
 export async function migrate(db: SQLiteDatabase): Promise<void> {
   const row = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
   const currentVersion = row?.user_version ?? 0;

@@ -16,6 +16,21 @@ export type Totals = Pick<HealthRecord, 'steps' | 'calories' | 'water'>;
 // totals for one date (one bar on the chart)
 export type DayTotals = Totals & { date: string };
 
+// The three numbers an entry can change
+export type EntryMetric = keyof Totals;
+
+export const ENTRY_METRICS: EntryMetric[] = ['steps', 'calories', 'water'];
+
+// One row of the record_entries table: one thing that happened on a day
+export type RecordEntry = {
+  id: number;
+  recordId: number;      // health_records.id, the day this entry belongs to
+  createdAt: string;    // "YYYY-MM-DDTHH:MM:SS"
+  metric: EntryMetric;
+  amount: number;
+  note: string | null;
+};
+
 //history list is ordering 
 export type SortOption = 'newest' | 'oldest' | 'mostSteps';
 
