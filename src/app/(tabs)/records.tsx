@@ -1,13 +1,13 @@
 import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
 import { FlatList, StyleSheet, View } from 'react-native';
-import { ActivityIndicator, Card, FAB, HelperText, IconButton, Searchbar, SegmentedButtons, Text } from 'react-native-paper';
+import { ActivityIndicator, FAB, HelperText, Searchbar, SegmentedButtons } from 'react-native-paper';
 
 import { ConfirmDialog } from '@/core/ui/ConfirmDialog';
 import { EmptyState } from '@/core/ui/EmptyState';
 import { useSnackbarStore } from '@/core/ui/snackbarStore';
 import { formatDisplayDate } from '@/core/utils/dates';
-import { formatNumber } from '@/core/utils/format';
+import { RecordCard } from '@/features/records/components/RecordCard';
 import { useRecordStore } from '@/features/records/recordStore';
 import type { HealthRecord, SortOption } from '@/features/records/types';
 
@@ -29,10 +29,10 @@ export default function RecordsScreen() {
   const deleteRecord = useRecordStore((state) => state.deleteRecord);
   const showMessage = useSnackbarStore((state) => state.showMessage);
 
-  // deleting waiting for confirmation
+  // deleting wait for confirmation
   const [recordToDelete, setRecordToDelete] = useState<HealthRecord | null>(null);
 
-  // Reload every time this tab comes into view ( after adding a record).
+  // Reload every time this tab comes into view (like after adding a record)
   useFocusEffect(
     useCallback(() => {
       loadRecords();
@@ -82,30 +82,17 @@ export default function RecordsScreen() {
         data={records}
         keyExtractor={(record) => String(record.id)}
         renderItem={({ item }) => (
-          <Card mode="elevated" style={styles.card}>
-            <Card.Title
-              title={formatDisplayDate(item.date)}
-              titleVariant="titleMedium"
-              right={(props) => (
-                <IconButton {...props} icon="delete-outline" accessibilityLabel="Delete record" onPress={() => setRecordToDelete(item)} />
-              )}
-            />
-            <Card.Content style={styles.metrics}>
-              <Text>{formatNumber(item.steps)} steps</Text>
-              <Text>{formatNumber(item.calories)} kcal</Text>
-              <Text>{formatNumber(item.water)} ml</Text>
-            </Card.Content>
-          </Card>
+          <RecordCard
+            record={item}
+            onPress={() => router.push(`/record/${item.id}`)}
+            onDelete={() => setRecordToDelete(item)}
+          />
         )}
         ListEmptyComponent={emptyList}
+        contentContainerStyle={styles.list}
       />
 
-      <FAB
-        icon="plus"
-        label="Add"
-        style={styles.fab}
-        onPress={() => router.push('/record/new')}
-      />
+      <FAB icon="plus" label="Add" style={styles.fab} onPress={() => router.push('/record/new')} />
 
       <ConfirmDialog
         visible={recordToDelete !== null}
@@ -123,8 +110,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   search: { marginHorizontal: 16, marginTop: 12 },
   sort: { marginHorizontal: 16, marginVertical: 12 },
+  list: { paddingBottom: 96 }, // room so the last card isn't hidden behind the Add button
   loading: { marginTop: 32 },
-  card: { marginHorizontal: 16, marginVertical: 6 },
-  metrics: { flexDirection: 'row', justifyContent: 'space-between' },
   fab: { position: 'absolute', right: 16, bottom: 16 },
 });
