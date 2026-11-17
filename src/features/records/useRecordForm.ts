@@ -5,6 +5,7 @@ import { todayISO } from '@/core/utils/dates';
 import * as recordRepository from './recordRepository';
 import { useRecordStore } from './recordStore';
 import { validateRecord, type RecordFormErrors, type RecordFormValues } from './validation';
+import { estimateCalories } from './calorieEstimate';
 
 function emptyForm(): RecordFormValues {
   return { date: todayISO(), steps: '', calories: '', water: '' };
@@ -22,6 +23,8 @@ export function useRecordForm(recordId?: number) {
   const [isLoading, setIsLoading] = useState(isEditing);
   const [isSaving, setIsSaving] = useState(false);
   const [notFound, setNotFound] = useState(false);
+  // a saved number is not an estimate, so editing starts with the field overruled.
+  const [caloriesTouched, setCaloriesTouched] = useState(isEditing);
 
   // Edit mode: load the record once and put its numbers into the text fields.
   useEffect(() => {
@@ -57,9 +60,28 @@ export function useRecordForm(recordId?: number) {
   }, [recordId]);
 
   function setField(field: keyof RecordFormValues, value: string) {
-    setValues((current) => ({ ...current, [field]: value }));
-    // hide this fiel's error and the form level 1, while fixing them
+    if (field === 'calories') setCaloriesTouched(true);
+
+    setValues((current) => {
+      const next = { ...current, [field]: value };
+      // While calories has not been edited, it follows the steps.
+      if (field === 'steps' && !caloriesTouched) {
+        const steps = Number(value.trim() || 0);
+        next.calories = steps > 0 ? String(estimateCalories(steps)) : '';
+      }
+      return next;
+    });
+    // hide this field's error and the form level one while fixing them
     setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+  }
+
+  // Pretend calories was never edited: it follows the steps again.
+  function recalculateCalories() {
+    setCaloriesTouched(false);
+    setValues((current) => ({
+      ...current,
+      calories: String(estimateCalories(Number(current.steps.trim() || 0))),
+    }));
   }
 
   // Validates and saves. Returns true when saved
@@ -89,5 +111,16 @@ export function useRecordForm(recordId?: number) {
     }
   }
 
-  return { values, errors, isEditing, isLoading, isSaving, notFound, setField, save };
+  return {
+    values,
+    errors,
+    isEditing,
+    isLoading,
+    isSaving,
+    notFound,
+    caloriesTouched,
+    setField,
+    recalculateCalories,
+    save,
+  };
 }
