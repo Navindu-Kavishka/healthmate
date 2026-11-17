@@ -39,28 +39,52 @@ export async function getRecordById(id: number): Promise<HealthRecord | null> {
   return db.getFirstAsync<HealthRecord>(`SELECT ${COLUMNS} FROM health_records WHERE id = ?`, id);
 }
 
-// Save a new record and returns the id
+// Save a day record and returns the id , if record exist is updated
 export async function addRecord(record: NewHealthRecord): Promise<number> {
   const db = await getDb();
   let recordId = 0;
   await db.withTransactionAsync(async () => {
-    const result = await db.runAsync(
-      'INSERT INTO health_records (date, steps, calories, water) VALUES (?, ?, ?, ?)',
+    const existing = await db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM health_records WHERE date = ? ORDER BY id DESC LIMIT 1',
       record.date,
-      record.steps,
-      record.calories,
-      record.water,
     );
-    recordId = result.lastInsertRowId;
+
+    if (existing) {
+      recordId = existing.id;
+      await db.runAsync(
+        'UPDATE health_records SET steps = ?, calories = ?, water = ? WHERE id = ?',
+        record.steps,
+        record.calories,
+        record.water,
+        recordId,
+      );
+    } else {
+      const result = await db.runAsync(
+        'INSERT INTO health_records (date, steps, calories, water) VALUES (?, ?, ?, ?)',
+        record.date,
+        record.steps,
+        record.calories,
+        record.water,
+      );
+      recordId = result.lastInsertRowId;
+    }
+
     await replaceEntries(db, recordId, record);
   });
   return recordId;
 }
 
-// Update an existing record
+// Update an existing record and day's log is rebuilt from them.
 export async function updateRecord(record: HealthRecord): Promise<void> {
   const db = await getDb();
   await db.withTransactionAsync(async () => {
+    // Moving a record onto a date that already has one would put two cards on that day.
+    // The record being edited is the one the user just confirmed, so the other row goes.
+    await db.runAsync(
+      'DELETE FROM health_records WHERE date = ? AND id != ?',
+      record.date,
+      record.id,
+    );
     await db.runAsync(
       'UPDATE health_records SET date = ?, steps = ?, calories = ?, water = ? WHERE id = ?',
       record.date,
