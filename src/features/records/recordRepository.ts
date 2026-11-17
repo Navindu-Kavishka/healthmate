@@ -52,7 +52,7 @@ export async function addRecord(record: NewHealthRecord): Promise<number> {
     if (existing) {
       recordId = existing.id;
       await db.runAsync(
-        'UPDATE health_records SET steps = ?, calories = ?, water = ? WHERE id = ?',
+        'UPDATE health_records SET steps = steps + ?, calories = calories + ?, water = water + ? WHERE id = ?',
         record.steps,
         record.calories,
         record.water,
@@ -69,7 +69,7 @@ export async function addRecord(record: NewHealthRecord): Promise<number> {
       recordId = result.lastInsertRowId;
     }
 
-    await replaceEntries(db, recordId, record);
+    await appendEntries(db, recordId, record);
   });
   return recordId;
 }
@@ -101,6 +101,24 @@ export async function updateRecord(record: HealthRecord): Promise<void> {
 export async function deleteRecord(id: number): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM health_records WHERE id = ?', id);
+}
+
+// One entry per number that was added: the log says what happened, not just the new total.
+async function appendEntries(db: SQLiteDatabase, recordId: number, added: Totals): Promise<void> {
+  const createdAt = new Date().toISOString();
+  for (const metric of ENTRY_METRICS) {
+    const amount = added[metric];
+    if (amount > 0) {
+      await db.runAsync(
+        'INSERT INTO record_entries (record_id, created_at, metric, amount, note) VALUES (?, ?, ?, ?, ?)',
+        recordId,
+        createdAt,
+        metric,
+        amount,
+        null,
+      );
+    }
+  }
 }
 
 // The total is the day's truth, so saving it rewrites the log that explains it.
