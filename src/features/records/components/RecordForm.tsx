@@ -2,7 +2,7 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
-import { ActivityIndicator, Button, HelperText, TextInput } from 'react-native-paper';
+import { ActivityIndicator, Button, HelperText, Text, TextInput } from 'react-native-paper';
 
 import { EmptyState } from '@/core/ui/EmptyState';
 import { parseISODate, toISODate } from '@/core/utils/dates';
@@ -74,6 +74,15 @@ export function RecordForm({ recordId }: Props) {
           onChangeText={(text) => form.setField('water', text)}
         />
 
+        <Text variant="bodySmall" style={styles.hint}>
+          Steps, calories and water can stay empty — empty counts as 0. Add at least one.
+        </Text>
+        {form.errors.form ? (
+          <HelperText type="error" visible>
+            {form.errors.form}
+          </HelperText>
+        ) : null}
+
         <Button mode="contained" icon="content-save" onPress={handleSave} loading={form.isSaving} disabled={form.isSaving}>
           {form.isEditing ? 'Save changes' : 'Add record'}
         </Button>
@@ -122,5 +131,6 @@ function NumberField({ label, unit, value, error, onChangeText }: NumberFieldPro
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: 16 },
+  hint: { marginBottom: 8, marginLeft: 2 },
   loading: { marginTop: 32 },
 });

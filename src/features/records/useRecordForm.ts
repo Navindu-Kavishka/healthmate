@@ -58,7 +58,8 @@ export function useRecordForm(recordId?: number) {
 
   function setField(field: keyof RecordFormValues, value: string) {
     setValues((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined })); // hide the error while fixing it
+    // hide this fiel's error and the form level 1, while fixing them
+    setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
   }
 
   // Validates and saves. Returns true when saved
