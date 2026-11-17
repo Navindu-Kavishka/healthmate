@@ -1,17 +1,30 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
+
 import { getDb } from '@/core/db/database';
-import { EMPTY_TOTALS, type DayTotals, type HealthRecord, type NewHealthRecord, type SortOption, type Totals } from './types';
+import { EMPTY_TOTALS, ENTRY_METRICS, type DayTotals, type EntryMetric, type HealthRecord, type NewHealthRecord, type RecordEntry, type SortOption, type Totals } from './types';
 
 
 const COLUMNS = 'id, date, steps, calories, water';
+const ENTRY_COLUMNS = 'id, record_id AS recordId, created_at AS createdAt, metric, amount, note';
 
-// ORDER BY can't take a ? placeholder, only these fixed strings are ever used.
+// ORDER BY can't take a ? placeholder, only these fixed strings are ever used
 const ORDER_BY: Record<SortOption, string> = {
   newest: 'date DESC, id DESC',
   oldest: 'date ASC, id ASC',
   mostSteps: 'steps DESC, date DESC',
 };
 
-//All records whose date starts with `dateSearch` ("2026", "2026-11", "2026-11-07")
+// same for column names: an entry's metric picks one of these three strings,
+// so no user value ever reaches the SQL text.
+const TOTALS_COLUMN: Record<EntryMetric, 'steps' | 'calories' | 'water'> = {
+  steps: 'steps',
+  calories: 'calories',
+  water: 'water',
+};
+
+const INSERT_EMPTY_DAY = 'INSERT INTO health_records (date, steps, calories, water) VALUES (?, 0, 0, 0)';
+
+//All records - date starts with `dateSearch` ("2026", "2026-11", "2026-11-07")
 export async function getRecords(dateSearch = '', sort: SortOption = 'newest'): Promise<HealthRecord[]> {
   const db = await getDb();
   const prefix = dateSearch.replace(/[^0-9-]/g, ''); // dates only hold digits and dashes
@@ -26,36 +39,139 @@ export async function getRecordById(id: number): Promise<HealthRecord | null> {
   return db.getFirstAsync<HealthRecord>(`SELECT ${COLUMNS} FROM health_records WHERE id = ?`, id);
 }
 
-// Saves a new record and returns the id
+// Save a new record and returns the id
 export async function addRecord(record: NewHealthRecord): Promise<number> {
   const db = await getDb();
-  const result = await db.runAsync(
-    'INSERT INTO health_records (date, steps, calories, water) VALUES (?, ?, ?, ?)',
-    record.date,
-    record.steps,
-    record.calories,
-    record.water,
-  );
-  return result.lastInsertRowId;
+  let recordId = 0;
+  await db.withTransactionAsync(async () => {
+    const result = await db.runAsync(
+      'INSERT INTO health_records (date, steps, calories, water) VALUES (?, ?, ?, ?)',
+      record.date,
+      record.steps,
+      record.calories,
+      record.water,
+    );
+    recordId = result.lastInsertRowId;
+    await replaceEntries(db, recordId, record);
+  });
+  return recordId;
 }
 
 // Update an existing record
 export async function updateRecord(record: HealthRecord): Promise<void> {
   const db = await getDb();
-  await db.runAsync(
-    'UPDATE health_records SET date = ?, steps = ?, calories = ?, water = ? WHERE id = ?',
-    record.date,
-    record.steps,
-    record.calories,
-    record.water,
-    record.id,
-  );
+  await db.withTransactionAsync(async () => {
+    await db.runAsync(
+      'UPDATE health_records SET date = ?, steps = ?, calories = ?, water = ? WHERE id = ?',
+      record.date,
+      record.steps,
+      record.calories,
+      record.water,
+      record.id,
+    );
+    await replaceEntries(db, record.id, record);
+  });
 }
 
-// Delete a record by id
+// Delete a record by id. Its entries go with it through ON DELETE CASCADE.
 export async function deleteRecord(id: number): Promise<void> {
   const db = await getDb();
   await db.runAsync('DELETE FROM health_records WHERE id = ?', id);
+}
+
+// The total is the day's truth, so saving it rewrites the log that explains it.
+async function replaceEntries(db: SQLiteDatabase, recordId: number, totals: Totals): Promise<void> {
+  const createdAt = new Date().toISOString();
+  await db.runAsync('DELETE FROM record_entries WHERE record_id = ?', recordId);
+
+  for (const metric of ENTRY_METRICS) {
+    if (totals[metric] > 0) {
+      await db.runAsync(
+        'INSERT INTO record_entries (record_id, created_at, metric, amount, note) VALUES (?, ?, ?, ?, ?)',
+        recordId,
+        createdAt,
+        metric,
+        totals[metric],
+        'edited totals',
+      );
+    }
+  }
+}
+
+// get all on one date, oldest first
+export async function getEntriesForDate(date: string): Promise<RecordEntry[]> {
+  const db = await getDb();
+  return db.getAllAsync<RecordEntry>(
+    `SELECT ${ENTRY_COLUMNS} FROM record_entries
+     WHERE record_id IN (SELECT id FROM health_records WHERE date = ?)
+     ORDER BY created_at, id`,
+    date,
+  );
+}
+
+// Writes one entry and adds its amount to the day's total, or creates the day at 0 first
+export async function addEntry(
+  date: string,
+  metric: EntryMetric,
+  amount: number,
+  note: string | null = null,
+): Promise<RecordEntry> {
+  if (!Number.isInteger(amount) || amount <= 0) {
+    throw new Error(`Invalid entry amount: ${amount}`);
+  }
+
+  const db = await getDb();
+  const createdAt = new Date().toISOString();
+  let recordId = 0;
+  let entryId = 0;
+
+  await db.withTransactionAsync(async () => {
+    // A day with no row yet start empty, so the entry has something to belong to.
+    const day = await db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM health_records WHERE date = ? ORDER BY id DESC LIMIT 1',
+      date,
+    );
+    recordId = day?.id ?? (await db.runAsync(INSERT_EMPTY_DAY, date)).lastInsertRowId;
+
+    const result = await db.runAsync(
+      'INSERT INTO record_entries (record_id, created_at, metric, amount, note) VALUES (?, ?, ?, ?, ?)',
+      recordId,
+      createdAt,
+      metric,
+      amount,
+      note,
+    );
+    entryId = result.lastInsertRowId;
+    await db.runAsync(
+      `UPDATE health_records SET ${TOTALS_COLUMN[metric]} = ${TOTALS_COLUMN[metric]} + ? WHERE id = ?`,
+      amount,
+      recordId,
+    );
+  });
+
+  return { id: entryId, recordId, createdAt, metric, amount, note };
+}
+
+// Removes one entry and takes its amount back off the day, never below zero
+export async function deleteEntry(id: number): Promise<void> {
+  const db = await getDb();
+
+  await db.withTransactionAsync(async () => {
+    const entry = await db.getFirstAsync<Pick<RecordEntry, 'recordId' | 'metric' | 'amount'>>(
+      'SELECT record_id AS recordId, metric, amount FROM record_entries WHERE id = ?',
+      id,
+    );
+    if (!entry) return; // already gone- a second undo, or the day was deleted
+
+    await db.runAsync('DELETE FROM record_entries WHERE id = ?', id);
+    await db.runAsync(
+      `UPDATE health_records
+       SET ${TOTALS_COLUMN[entry.metric]} = MAX(${TOTALS_COLUMN[entry.metric]} - ?, 0)
+       WHERE id = ?`,
+      entry.amount,
+      entry.recordId,
+    );
+  });
 }
 
 // Add up every entry for one date. COALESCE turns "no rows" (NULL) into 0
@@ -72,7 +188,7 @@ export async function getTotalsForDate(date: string): Promise<Totals> {
   return row ?? EMPTY_TOTALS;
 }
 
-// One row per date between the two dates (inclusive). Dates with no entries are missing.
+// One row per date between the two dates (inclusive). Dates with no entries are missing
 export async function getDailyTotals(fromDate: string, toDate: string): Promise<DayTotals[]> {
   const db = await getDb();
   return db.getAllAsync<DayTotals>(

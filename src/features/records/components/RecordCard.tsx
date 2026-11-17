@@ -9,17 +9,21 @@ type Props = {
   record: HealthRecord;
   onPress: () => void;
   onDelete: () => void;
+  onEdit?: () => void;
 };
 
 // records in the History list edit
-export function RecordCard({ record, onPress, onDelete }: Props) {
+export function RecordCard({ record, onPress, onEdit, onDelete }: Props) {
   return (
-    <Card mode="elevated" style={styles.card} onPress={onPress} accessibilityHint="Opens the record for editing">
+    <Card mode="elevated" style={styles.card} onPress={onPress} accessibilityHint="Opens the day's log">
       <Card.Title
         title={formatDisplayDate(record.date)}
         titleVariant="titleMedium"
         right={(props) => (
-          <IconButton {...props} icon="delete-outline" accessibilityLabel="Delete record" onPress={onDelete} />
+          <View style={styles.actions}>
+            <IconButton {...props} icon="pencil-outline" accessibilityLabel="Edit record" onPress={onEdit} />
+            <IconButton {...props} icon="delete-outline" accessibilityLabel="Delete record" onPress={onDelete} />
+          </View>
         )}
       />
       <Card.Content style={styles.metrics}>
@@ -47,6 +51,7 @@ function Metric({ icon, value, unit }: { icon: string; value: number; unit: stri
 
 const styles = StyleSheet.create({
   card: { marginHorizontal: 16, marginVertical: 6 },
+  actions: { flexDirection: 'row', alignItems: 'center' },
   metrics: { flexDirection: 'row', justifyContent: 'space-between' },
   metric: { flexDirection: 'row', alignItems: 'center', gap: 4 },
 });
