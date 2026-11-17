@@ -3,14 +3,10 @@ import { Icon, Text, useTheme } from 'react-native-paper';
 
 import { formatEntryTime } from '@/core/utils/dates';
 import { formatNumber } from '@/core/utils/format';
-import type { EntryMetric, RecordEntry } from '../types';
+import { METRICS } from '../metrics';
+import { useMetricColors } from '@/core/theme/theme';
+import type { RecordEntry } from '../types';
 
-// icon and unit for one kind of entry
-const METRIC: Record<EntryMetric, { icon: string; unit: string }> = {
-  steps: { icon: 'walk', unit: 'steps' },
-  calories: { icon: 'fire', unit: 'kcal' },
-  water: { icon: 'cup-water', unit: 'ml' },
-};
 
 type Props = {
   entries: RecordEntry[];
@@ -19,6 +15,7 @@ type Props = {
 // The log behind a day's totals, oldest first
 export function EntryList({ entries }: Props) {
   const theme = useTheme();
+  const colors = useMetricColors();
 
   if (entries.length === 0) {
     return (
@@ -35,10 +32,10 @@ export function EntryList({ entries }: Props) {
           <Text variant="bodySmall" style={styles.time}>
             {formatEntryTime(entry.createdAt)}
           </Text>
-          <Icon source={METRIC[entry.metric].icon} size={18} color={theme.colors.onSurfaceVariant} />
+          <Icon source={METRICS[entry.metric].icon} size={18} color={colors[entry.metric]} />
           <Text variant="titleSmall">{formatNumber(entry.amount)}</Text>
           <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-            {METRIC[entry.metric].unit}
+            {METRICS[entry.metric].unit}
           </Text>
           {entry.note ? (
             <Text variant="bodySmall" numberOfLines={1} style={[styles.note, { color: theme.colors.onSurfaceVariant }]}>

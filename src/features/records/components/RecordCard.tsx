@@ -3,7 +3,9 @@ import { Card, Icon, IconButton, Text, useTheme } from 'react-native-paper';
 
 import { formatDisplayDate } from '@/core/utils/dates';
 import { formatNumber } from '@/core/utils/format';
-import type { HealthRecord } from '../types';
+import type { EntryMetric, HealthRecord } from '../types';
+import { METRICS } from '../metrics';
+import { useMetricColors } from '@/core/theme/theme';
 
 type Props = {
   record: HealthRecord;
@@ -27,23 +29,24 @@ export function RecordCard({ record, onPress, onEdit, onDelete }: Props) {
         )}
       />
       <Card.Content style={styles.metrics}>
-        <Metric icon="walk" value={record.steps} unit="steps" />
-        <Metric icon="fire" value={record.calories} unit="kcal" />
-        <Metric icon="cup-water" value={record.water} unit="ml" />
+        <Metric metric="steps" value={record.steps} />
+        <Metric metric="calories" value={record.calories} />
+        <Metric metric="water" value={record.water} />
       </Card.Content>
     </Card>
   );
 }
 
-function Metric({ icon, value, unit }: { icon: string; value: number; unit: string }) {
+function Metric({ metric, value }: { metric: EntryMetric; value: number }) {
   const theme = useTheme();
+  const colors = useMetricColors();
 
   return (
     <View style={styles.metric}>
-      <Icon source={icon} size={20} color={theme.colors.primary} />
+      <Icon source={METRICS[metric].icon} size={20} color={colors[metric]} />
       <Text variant="titleSmall">{formatNumber(value)}</Text>
       <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
-        {unit}
+        {METRICS[metric].unit}
       </Text>
     </View>
   );
