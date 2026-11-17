@@ -49,3 +49,8 @@ export function formatWeekday(isoDate: string): string {
   const date = parseISODate(isoDate);
   return date ? WEEKDAYS[date.getDay()] : '';
 }
+
+// "2026-11-07T08:10:00.000Z" to "08:10" (when an entry was logged; UTC, like created_at)
+export function formatEntryTime(createdAt: string): string {
+  return createdAt.slice(11, 16);
+}

@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Card, Icon, ProgressBar, Text, useTheme } from 'react-native-paper';
 
@@ -11,10 +12,11 @@ type Props = {
   value: number;
   goal: number;
   color: string;
+  children?: ReactNode; // extra actions for this metric, such as the water chips
 };
 
 // total for 1 measurement  
-export function StatCard({ icon, label, unit, value, goal, color }: Props) {
+export function StatCard({ icon, label, unit, value, goal, color, children }: Props) {
   const theme = useTheme();
   const progress = progressTowards(value, goal);
   const percent = Math.round(progress * 100);
@@ -39,6 +41,7 @@ export function StatCard({ icon, label, unit, value, goal, color }: Props) {
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
           {percent}% of {formatNumber(goal)} {unit}
         </Text>
+        {children}
       </Card.Content>
     </Card>
   );

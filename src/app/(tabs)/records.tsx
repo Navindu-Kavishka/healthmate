@@ -84,7 +84,8 @@ export default function RecordsScreen() {
         renderItem={({ item }) => (
           <RecordCard
             record={item}
-            onPress={() => router.push(`/record/${item.id}`)}
+            onPress={() => router.push(`/day/${item.date}`)}
+            onEdit={() => router.push(`/record/${item.id}`)}
             onDelete={() => setRecordToDelete(item)}
           />
         )}

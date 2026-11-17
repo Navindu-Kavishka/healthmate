@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, type Theme as NavigationTheme } from 'expo-router';
+import { useColorScheme } from 'react-native';
 import { MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
 
 export const lightTheme: MD3Theme = {
@@ -54,6 +55,21 @@ export const darkTheme: MD3Theme = {
     outlineVariant: '#3F4947',
   },
 };
+
+// The three metric colours the brief names. Steps keep the theme's teal;
+// calories and water get their own tokens so every screen agrees.
+export type MetricColorKey = 'steps' | 'calories' | 'water';
+
+export const metricColors: Record<'light' | 'dark', Record<MetricColorKey, string>> = {
+  light: { steps: '#006A60', calories: '#B3261E', water: '#1565C0' },
+  dark: { steps: '#82D5C8', calories: '#FFB4AB', water: '#A8C8FF' },
+};
+
+// same rule the app already uses: the system colour scheme picks the palette
+export function useMetricColors(): Record<MetricColorKey, string> {
+  const isDark = useColorScheme() === 'dark';
+  return isDark ? metricColors.dark : metricColors.light;
+}
 
 // set my defined colors to navigation theme colors
 export function toNavigationTheme(theme: MD3Theme): NavigationTheme {

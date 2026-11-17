@@ -2,11 +2,13 @@ import DateTimePicker, { type DateTimePickerEvent } from '@react-native-communit
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from 'react-native';
-import { ActivityIndicator, Button, HelperText, TextInput } from 'react-native-paper';
+import { ActivityIndicator, Button, HelperText, Text, TextInput } from 'react-native-paper';
 
 import { EmptyState } from '@/core/ui/EmptyState';
 import { parseISODate, toISODate } from '@/core/utils/dates';
 import { useRecordForm } from '../useRecordForm';
+import { formatNumber } from '@/core/utils/format';
+import { KCAL_PER_STEP } from '../calorieEstimate';
 
 type Props = {
   recordId?: number;
@@ -66,6 +68,17 @@ export function RecordForm({ recordId }: Props) {
           error={form.errors.calories}
           onChangeText={(text) => form.setField('calories', text)}
         />
+
+        {form.caloriesTouched ? (
+          <Button compact mode="text" icon="calculator-variant" onPress={form.recalculateCalories} style={styles.recalculate}>
+            Recalculate from steps
+          </Button>
+        ) : (
+          <HelperText type="info" visible={Boolean(form.values.calories)}>
+            Est. from {formatNumber(Number(form.values.steps.trim() || 0))} steps · {KCAL_PER_STEP} kcal/step
+          </HelperText>
+        )}
+
         <NumberField
           label="Water"
           unit="ml"
@@ -73,6 +86,15 @@ export function RecordForm({ recordId }: Props) {
           error={form.errors.water}
           onChangeText={(text) => form.setField('water', text)}
         />
+
+        <Text variant="bodySmall" style={styles.hint}>
+          Steps, calories and water can stay empty — empty counts as 0. Add at least one.
+        </Text>
+        {form.errors.form ? (
+          <HelperText type="error" visible>
+            {form.errors.form}
+          </HelperText>
+        ) : null}
 
         <Button mode="contained" icon="content-save" onPress={handleSave} loading={form.isSaving} disabled={form.isSaving}>
           {form.isEditing ? 'Save changes' : 'Add record'}
@@ -122,5 +144,7 @@ function NumberField({ label, unit, value, error, onChangeText }: NumberFieldPro
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   content: { padding: 16 },
+  hint: { marginBottom: 8, marginLeft: 2 },
+  recalculate: { alignSelf: 'flex-start', marginBottom: 8 },
   loading: { marginTop: 32 },
 });
