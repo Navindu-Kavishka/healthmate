@@ -12,17 +12,18 @@ type Props = {
   value: number;
   goal: number;
   color: string;
+  fill: string; // card background, a soft tint of color
   children?: ReactNode; // extra actions for this metric, such as the water chips
 };
 
 // total for 1 measurement  
-export function StatCard({ icon, label, unit, value, goal, color, children }: Props) {
+export function StatCard({ icon, label, unit, value, goal, color, fill, children }: Props) {
   const theme = useTheme();
   const progress = progressTowards(value, goal);
   const percent = Math.round(progress * 100);
 
   return (
-    <Card mode="contained" style={styles.card} accessibilityLabel={`${label}: ${formatNumber(value)} ${unit}, ${percent}% of goal`}>
+    <Card mode="contained" style={[styles.card, { backgroundColor: fill }]} accessibilityLabel={`${label}: ${formatNumber(value)} ${unit}, ${percent}% of goal`}>
       <Card.Content style={styles.content}>
         <View style={styles.header}>
           <Icon source={icon} size={24} color={color} />
