@@ -9,13 +9,14 @@ import { useGoalStore } from '@/features/goals/goalStore';
 import { EntryList } from '@/features/records/components/EntryList';
 import { getEntriesForDate, getTotalsForDate } from '@/features/records/recordRepository';
 import { EMPTY_TOTALS, type RecordEntry, type Totals } from '@/features/records/types';
-import { useMetricColors } from '@/core/theme/theme';
+import { useMetricColors, useMetricFills } from '@/core/theme/theme';
 
 // 1 day view: totals and log for a specific dat
 export default function DayScreen() {
   const { date } = useLocalSearchParams<{ date: string }>();
   const theme = useTheme();
   const colors = useMetricColors();
+  const fills = useMetricFills();
   const goals = useGoalStore((state) => state.goals);
   const loadGoals = useGoalStore((state) => state.loadGoals);
 
@@ -65,9 +66,9 @@ export default function DayScreen() {
           <ActivityIndicator style={styles.loading} />
         ) : (
           <>
-            <StatCard icon="walk" label="Steps" unit="steps" value={totals.steps} goal={goals.steps} color={colors.steps} />
-            <StatCard icon="fire" label="Calories" unit="kcal" value={totals.calories} goal={goals.calories} color={colors.calories} />
-            <StatCard icon="cup-water" label="Water" unit="ml" value={totals.water} goal={goals.water} color={colors.water} />
+            <StatCard icon="walk" label="Steps" unit="steps" value={totals.steps} goal={goals.steps} color={colors.steps} fill={fills.steps} />
+            <StatCard icon="fire" label="Calories" unit="kcal" value={totals.calories} goal={goals.calories} color={colors.calories} fill={fills.calories} />
+            <StatCard icon="cup-water" label="Water" unit="ml" value={totals.water} goal={goals.water} color={colors.water} fill={fills.water} />
 
             <Card mode="contained">
               <Card.Content style={styles.logContent}>

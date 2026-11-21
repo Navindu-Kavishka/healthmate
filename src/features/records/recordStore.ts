@@ -1,17 +1,21 @@
 import { create } from 'zustand';
 
+import { useSnackbarStore } from '@/core/ui/snackbarStore';
 import * as recordRepository from './recordRepository';
 import type { HealthRecord, NewHealthRecord, SortOption } from './types';
 
 type RecordState = {
   records: HealthRecord[];
   search: string;
+  from: string | null; // "YYYY-MM-DD", both ends included, null = not set
+  to: string | null;
   sort: SortOption;
   isLoading: boolean;
   error: string | null;
 
   loadRecords: () => Promise<void>;
   setSearch: (search: string) => Promise<void>;
+  setRange: (from: string | null, to: string | null) => Promise<void>;
   setSort: (sort: SortOption) => Promise<void>;
   addRecord: (record: NewHealthRecord) => Promise<void>;
   deleteRecord: (id: number) => Promise<void>;
@@ -26,6 +30,8 @@ let latestRequest = 0;
 export const useRecordStore = create<RecordState>()((set, get) => ({
   records: [],
   search: '',
+  from: null,
+  to: null,
   sort: 'newest',
   isLoading: false,
   error: null,
@@ -34,8 +40,8 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     const request = ++latestRequest;
     set({ isLoading: true, error: null });
     try {
-      const { search, sort } = get();
-      const records = await recordRepository.getRecords(search, sort);
+      const { search, from, to, sort } = get();
+      const records = await recordRepository.getRecords({ text: search, from, to, sort });
       if (request === latestRequest) set({ records, isLoading: false });
     } catch (error) {
       console.error(error);
@@ -45,6 +51,11 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
 
   setSearch: async (search) => {
     set({ search });
+    await get().loadRecords();
+  },
+
+  setRange: async (from, to) => {
+    set({ from, to });
     await get().loadRecords();
   },
 
@@ -64,7 +75,27 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     },
 
   deleteRecord: async (id) => {
+    // keep a copy first, Undo needs it
+    const snapshot = await recordRepository.snapshotRecord(id);
     await recordRepository.deleteRecord(id);
     await get().loadRecords();
-  }
+
+    if (!snapshot) return;
+
+    let isUndone = false;
+    useSnackbarStore.getState().showMessage('Record deleted', {
+      label: 'Undo',
+      run: async () => {
+        if (isUndone) return; // double tap, already restored
+        isUndone = true;
+        try {
+          await recordRepository.restoreRecord(snapshot);
+          await get().loadRecords();
+        } catch (undoError) {
+          console.error(undoError);
+          useSnackbarStore.getState().showMessage('Could not undo that delete');
+        }
+      },
+    });
+  },
 }));
