@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 
+import { useSnackbarStore } from '@/core/ui/snackbarStore';
 import * as recordRepository from './recordRepository';
 import type { HealthRecord, NewHealthRecord, SortOption } from './types';
 
@@ -74,7 +75,27 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     },
 
   deleteRecord: async (id) => {
+    // keep a copy first, Undo needs it
+    const snapshot = await recordRepository.snapshotRecord(id);
     await recordRepository.deleteRecord(id);
     await get().loadRecords();
-  }
+
+    if (!snapshot) return;
+
+    let isUndone = false;
+    useSnackbarStore.getState().showMessage('Record deleted', {
+      label: 'Undo',
+      run: async () => {
+        if (isUndone) return; // double tap, already restored
+        isUndone = true;
+        try {
+          await recordRepository.restoreRecord(snapshot);
+          await get().loadRecords();
+        } catch (undoError) {
+          console.error(undoError);
+          useSnackbarStore.getState().showMessage('Could not undo that delete');
+        }
+      },
+    });
+  },
 }));

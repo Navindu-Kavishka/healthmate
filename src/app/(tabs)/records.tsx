@@ -64,8 +64,8 @@ export default function RecordsScreen() {
     const { id } = recordToDelete;
     setRecordToDelete(null);
     try {
+      // the store shows "Record deleted" + Undo after this
       await deleteRecord(id);
-      showMessage('Record deleted');
     } catch (deleteError) {
       console.error(deleteError);
       showMessage('Could not delete the record');
