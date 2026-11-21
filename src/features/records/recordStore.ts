@@ -6,12 +6,15 @@ import type { HealthRecord, NewHealthRecord, SortOption } from './types';
 type RecordState = {
   records: HealthRecord[];
   search: string;
+  from: string | null; // "YYYY-MM-DD", both ends included, null = not set
+  to: string | null;
   sort: SortOption;
   isLoading: boolean;
   error: string | null;
 
   loadRecords: () => Promise<void>;
   setSearch: (search: string) => Promise<void>;
+  setRange: (from: string | null, to: string | null) => Promise<void>;
   setSort: (sort: SortOption) => Promise<void>;
   addRecord: (record: NewHealthRecord) => Promise<void>;
   deleteRecord: (id: number) => Promise<void>;
@@ -26,6 +29,8 @@ let latestRequest = 0;
 export const useRecordStore = create<RecordState>()((set, get) => ({
   records: [],
   search: '',
+  from: null,
+  to: null,
   sort: 'newest',
   isLoading: false,
   error: null,
@@ -34,8 +39,8 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
     const request = ++latestRequest;
     set({ isLoading: true, error: null });
     try {
-      const { search, sort } = get();
-      const records = await recordRepository.getRecords(search, sort);
+      const { search, from, to, sort } = get();
+      const records = await recordRepository.getRecords({ text: search, from, to, sort });
       if (request === latestRequest) set({ records, isLoading: false });
     } catch (error) {
       console.error(error);
@@ -45,6 +50,11 @@ export const useRecordStore = create<RecordState>()((set, get) => ({
 
   setSearch: async (search) => {
     set({ search });
+    await get().loadRecords();
+  },
+
+  setRange: async (from, to) => {
+    set({ from, to });
     await get().loadRecords();
   },
 

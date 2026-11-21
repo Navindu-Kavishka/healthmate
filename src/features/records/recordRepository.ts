@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { getDb } from '@/core/db/database';
+import { buildRecordFilter, type RecordFilter } from './recordFilter';
 import { EMPTY_TOTALS, ENTRY_METRICS, type DayTotals, type EntryMetric, type HealthRecord, type NewHealthRecord, type RecordEntry, type SortOption, type Totals } from './types';
 
 
@@ -24,13 +25,18 @@ const TOTALS_COLUMN: Record<EntryMetric, 'steps' | 'calories' | 'water'> = {
 
 const INSERT_EMPTY_DAY = 'INSERT INTO health_records (date, steps, calories, water) VALUES (?, 0, 0, 0)';
 
-//All records - date starts with `dateSearch` ("2026", "2026-11", "2026-11-07")
-export async function getRecords(dateSearch = '', sort: SortOption = 'newest'): Promise<HealthRecord[]> {
+// records where the date starts with the search text, and inside from/to if they are set
+export async function getRecords({
+  text = '',
+  from,
+  to,
+  sort = 'newest',
+}: RecordFilter = {}): Promise<HealthRecord[]> {
   const db = await getDb();
-  const prefix = dateSearch.replace(/[^0-9-]/g, ''); // dates only hold digits and dashes
+  const { where, params } = buildRecordFilter({ text, from, to });
   return db.getAllAsync<HealthRecord>(
-    `SELECT ${COLUMNS} FROM health_records WHERE date LIKE ? ORDER BY ${ORDER_BY[sort]}`,
-    `${prefix}%`,
+    `SELECT ${COLUMNS} FROM health_records WHERE ${where} ORDER BY ${ORDER_BY[sort]}`,
+    ...params,
   );
 }
 
