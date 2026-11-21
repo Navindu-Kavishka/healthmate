@@ -37,7 +37,7 @@ export function StatCard({ icon, label, unit, value, goal, color, children }: Pr
           <Text variant="bodyMedium"> {unit}</Text>
         </Text>
 
-        <ProgressBar progress={progress} color={color} style={styles.bar} />
+        <ProgressBar progress={progress} color={color} style={[styles.bar, { backgroundColor: `${color}3D` }]} />
         <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
           {percent}% of {formatNumber(goal)} {unit}
         </Text>
