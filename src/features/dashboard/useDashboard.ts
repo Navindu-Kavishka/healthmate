@@ -8,6 +8,7 @@ import { EMPTY_TOTALS, type DayTotals, type EntryMetric, type RecordEntry, type 
 import { fillMissingDays } from './dashboardMath';
 import { formatNumber } from '@/core/utils/format';
 import { useSnackbarStore } from '@/core/ui/snackbarStore';
+import { tapFeedback } from './tapFeedback';
 
 const QUICK_ADD_NOTE = 'Quick add';
 
@@ -71,6 +72,8 @@ export function useDashboard() {
   // One chip tap: one entry, and one action that takes it back.
   const quickAddWater = useCallback(
     async (amount: number) => {
+      //buzz first then save
+      tapFeedback();
       const entry = await logEntry('water', amount, QUICK_ADD_NOTE);
       if (!entry) return;
 
