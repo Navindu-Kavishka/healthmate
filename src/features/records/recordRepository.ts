@@ -1,6 +1,7 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
 import { getDb } from '@/core/db/database';
+import { buildRecordFilter, type RecordFilter } from './recordFilter';
 import { EMPTY_TOTALS, ENTRY_METRICS, type DayTotals, type EntryMetric, type HealthRecord, type NewHealthRecord, type RecordEntry, type SortOption, type Totals } from './types';
 
 
@@ -24,13 +25,18 @@ const TOTALS_COLUMN: Record<EntryMetric, 'steps' | 'calories' | 'water'> = {
 
 const INSERT_EMPTY_DAY = 'INSERT INTO health_records (date, steps, calories, water) VALUES (?, 0, 0, 0)';
 
-//All records - date starts with `dateSearch` ("2026", "2026-11", "2026-11-07")
-export async function getRecords(dateSearch = '', sort: SortOption = 'newest'): Promise<HealthRecord[]> {
+// records where the date starts with the search text, and inside from/to if they are set
+export async function getRecords({
+  text = '',
+  from,
+  to,
+  sort = 'newest',
+}: RecordFilter = {}): Promise<HealthRecord[]> {
   const db = await getDb();
-  const prefix = dateSearch.replace(/[^0-9-]/g, ''); // dates only hold digits and dashes
+  const { where, params } = buildRecordFilter({ text, from, to });
   return db.getAllAsync<HealthRecord>(
-    `SELECT ${COLUMNS} FROM health_records WHERE date LIKE ? ORDER BY ${ORDER_BY[sort]}`,
-    `${prefix}%`,
+    `SELECT ${COLUMNS} FROM health_records WHERE ${where} ORDER BY ${ORDER_BY[sort]}`,
+    ...params,
   );
 }
 
@@ -119,6 +125,53 @@ async function appendEntries(db: SQLiteDatabase, recordId: number, added: Totals
       );
     }
   }
+}
+
+// copy of the day and its log, taken before the delete so Undo can put it back
+export type RecordSnapshot = { record: HealthRecord; entries: RecordEntry[] };
+
+export async function snapshotRecord(id: number): Promise<RecordSnapshot | null> {
+  const db = await getDb();
+  const record = await getRecordById(id);
+  if (!record) return null;
+  const entries = await db.getAllAsync<RecordEntry>(
+    `SELECT ${ENTRY_COLUMNS} FROM record_entries WHERE record_id = ? ORDER BY created_at, id`,
+    id,
+  );
+  return { record, entries };
+}
+
+// puts the day and its log back with the same ids, so links to the day still work.
+// if the day is already back it does nothing, so a double tap on Undo is safe
+export async function restoreRecord({ record, entries }: RecordSnapshot): Promise<void> {
+  const db = await getDb();
+  await db.withTransactionAsync(async () => {
+    const existing = await db.getFirstAsync<{ id: number }>(
+      'SELECT id FROM health_records WHERE id = ?',
+      record.id,
+    );
+    if (existing) return;
+
+    await db.runAsync(
+      'INSERT INTO health_records (id, date, steps, calories, water) VALUES (?, ?, ?, ?, ?)',
+      record.id,
+      record.date,
+      record.steps,
+      record.calories,
+      record.water,
+    );
+    for (const entry of entries) {
+      await db.runAsync(
+        'INSERT INTO record_entries (id, record_id, created_at, metric, amount, note) VALUES (?, ?, ?, ?, ?, ?)',
+        entry.id,
+        entry.recordId,
+        entry.createdAt,
+        entry.metric,
+        entry.amount,
+        entry.note,
+      );
+    }
+  });
 }
 
 // The total is the day's truth, so saving it rewrites the log that explains it.

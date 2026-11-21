@@ -71,6 +71,17 @@ export function useMetricColors(): Record<MetricColorKey, string> {
   return isDark ? metricColors.dark : metricColors.light;
 }
 
+// soft fill behind each stat card so the three cards look different
+export const metricFills: Record<'light' | 'dark', Record<MetricColorKey, string>> = {
+  light: { steps: '#9EF2E4', calories: '#FFDAD6', water: '#D8E2FF' },
+  dark: { steps: '#005048', calories: '#93000A', water: '#00458F' },
+};
+
+export function useMetricFills(): Record<MetricColorKey, string> {
+  const isDark = useColorScheme() === 'dark';
+  return isDark ? metricFills.dark : metricFills.light;
+}
+
 // set my defined colors to navigation theme colors
 export function toNavigationTheme(theme: MD3Theme): NavigationTheme {
   const base = theme.dark ? DarkTheme : DefaultTheme;
